@@ -1040,6 +1040,62 @@
     alert('Venue map center updated to current screen view!');
   });
 
+  // Venue Backup & Restore (Export / Import JSON)
+  const btnExportVenue = document.getElementById('btnExportVenue');
+  const btnImportTrigger = document.getElementById('btnImportTrigger');
+  const venueFileInput = document.getElementById('venueFileInput');
+
+  if (btnExportVenue) {
+    btnExportVenue.addEventListener('click', () => {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(venue, null, 2));
+      const downloadAnchor = document.createElement('a');
+      const safeName = (venue.venueName || 'backup').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `hereabouts-${safeName}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
+  }
+
+  if (btnImportTrigger && venueFileInput) {
+    btnImportTrigger.addEventListener('click', () => venueFileInput.click());
+    venueFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const imported = JSON.parse(evt.target.result);
+          if (imported && Array.isArray(imported.places)) {
+            venue = {
+              venueName: imported.venueName || venue.venueName,
+              broadcast: imported.broadcast || '',
+              center: Array.isArray(imported.center) ? imported.center : venue.center,
+              zoom: imported.zoom || venue.zoom,
+              places: imported.places || [],
+              paths: imported.paths || [],
+              zones: imported.zones || [],
+              events: imported.events || []
+            };
+            headerVenueName.textContent = venue.venueName;
+            venueNameInput.value = venue.venueName;
+            renderAllLayers();
+            updateQualityChecklist();
+            autosave();
+            alert('Venue backup imported and saved successfully!');
+          } else {
+            alert('Invalid venue backup file format.');
+          }
+        } catch (err) {
+          alert('Failed to parse JSON file.');
+        }
+      };
+      reader.readAsText(file);
+      venueFileInput.value = '';
+    });
+  }
+
   function updateQualityChecklist() {
     const places = venue.places || [];
     const paths = venue.paths || [];

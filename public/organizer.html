@@ -448,7 +448,12 @@
           <label for="venueNameInput">Venue Name</label>
           <input type="text" id="venueNameInput" class="form-input form-input-sm" value="Hereabouts Venue">
         </div>
-        <button id="btnSetMapCenter" class="btn btn-secondary btn-block btn-sm">Set Current View as Venue Default</button>
+        <button id="btnSetMapCenter" class="btn btn-secondary btn-block btn-sm mb-2">Set Current View as Venue Default</button>
+        <div class="form-row mt-2">
+          <button id="btnExportVenue" class="btn btn-secondary btn-sm col" title="Download backup of all mapped places, paths, and zones">💾 Export JSON</button>
+          <button id="btnImportTrigger" class="btn btn-secondary btn-sm col" title="Restore map from a saved JSON file">📂 Import JSON</button>
+          <input type="file" id="venueFileInput" accept=".json" class="file-input-hidden">
+        </div>
       </div>
     </div>
   </aside>

@@ -17,6 +17,49 @@ const IS_VERCEL = !!process.env.VERCEL;
 const LOCAL_DATA_PATH = path.join(__dirname, 'data', 'venue.json');
 const DATA_FILE_PATH = IS_VERCEL ? path.join('/tmp', 'venue.json') : LOCAL_DATA_PATH;
 
+// In-memory cache for ultra-fast serverless response
+let memoryVenueCache = null;
+
+// Optional Vercel KV / Upstash Redis support for 100% persistent serverless storage
+const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+async function getFromKv() {
+  if (!KV_URL || !KV_TOKEN) return null;
+  try {
+    const res = await fetch(`${KV_URL}/get/hereabouts_venue`, {
+      headers: { Authorization: `Bearer ${KV_TOKEN}` }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.result) {
+        return typeof json.result === 'string' ? JSON.parse(json.result) : json.result;
+      }
+    }
+  } catch (err) {
+    console.warn('KV read error:', err.message);
+  }
+  return null;
+}
+
+async function saveToKv(data) {
+  if (!KV_URL || !KV_TOKEN) return false;
+  try {
+    const res = await fetch(`${KV_URL}/set/hereabouts_venue`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${KV_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('KV write error:', err.message);
+    return false;
+  }
+}
+
 // Ensure data file exists
 function ensureVenueFile() {
   try {
@@ -62,10 +105,12 @@ ensureVenueFile();
 
 // Helper to read venue data
 function readVenueData() {
+  if (memoryVenueCache) return memoryVenueCache;
   ensureVenueFile();
   try {
     const raw = fs.readFileSync(DATA_FILE_PATH, 'utf8');
-    return JSON.parse(raw);
+    memoryVenueCache = JSON.parse(raw);
+    return memoryVenueCache;
   } catch (err) {
     console.error('Error reading venue data:', err);
     return {
@@ -83,7 +128,11 @@ function readVenueData() {
 
 // Helper to write venue data atomically
 function writeVenueData(data) {
+  memoryVenueCache = data;
   ensureVenueFile();
+  if (KV_URL && KV_TOKEN) {
+    saveToKv(data);
+  }
   try {
     const tempPath = `${DATA_FILE_PATH}.tmp`;
     fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8');
@@ -91,7 +140,6 @@ function writeVenueData(data) {
     return true;
   } catch (err) {
     console.error('Error writing venue data:', err);
-    // Fallback direct write
     try {
       fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(data, null, 2), 'utf8');
       return true;
@@ -118,12 +166,12 @@ function requireOrganizerPin(req, res, next) {
 // API Routes
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Authenticate PIN
-app.post('/api/auth', (req, res) => {
+app.post(['/api/auth', '/auth'], (req, res) => {
   const { pin } = req.body || {};
   if (pin && String(pin).trim() === String(ORG_PIN).trim()) {
     return res.json({ success: true, message: 'Organizer PIN verified.' });
@@ -132,13 +180,20 @@ app.post('/api/auth', (req, res) => {
 });
 
 // Get venue data (Public for visitors & organizers)
-app.get('/api/venue', (req, res) => {
+app.get(['/api/venue', '/venue'], async (req, res) => {
+  if (KV_URL && KV_TOKEN) {
+    const kvData = await getFromKv();
+    if (kvData) {
+      memoryVenueCache = kvData;
+      return res.json(kvData);
+    }
+  }
   const data = readVenueData();
   res.json(data);
 });
 
 // Update full venue data (Organizer PIN required)
-app.put('/api/venue', requireOrganizerPin, (req, res) => {
+app.put(['/api/venue', '/venue'], requireOrganizerPin, async (req, res) => {
   const incoming = req.body;
   if (!incoming || typeof incoming !== 'object') {
     return res.status(400).json({ error: 'Invalid payload.' });
@@ -166,7 +221,7 @@ app.put('/api/venue', requireOrganizerPin, (req, res) => {
 });
 
 // Quick broadcast message update (Organizer PIN required)
-app.post('/api/venue/broadcast', requireOrganizerPin, (req, res) => {
+app.post(['/api/venue/broadcast', '/venue/broadcast'], requireOrganizerPin, (req, res) => {
   const { broadcast } = req.body || {};
   const data = readVenueData();
   data.broadcast = typeof broadcast === 'string' ? broadcast : '';
