@@ -1,0 +1,28 @@
+{
+  "name": "hereabouts",
+  "version": "1.0.0",
+  "description": "Hereabouts - Outdoor mobile venue mapping and visitor navigation MVP",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test-suite.js"
+  },
+  "keywords": [
+    "gps",
+    "mapping",
+    "navigation",
+    "leaflet",
+    "turf",
+    "outdoor"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

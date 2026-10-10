@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Hereabouts &mdash; Organizer Mapping Studio</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="organizer.css">
+</head>
+<body>
+
+  <!-- Top Organizer Header Bar -->
+  <header class="org-header">
+    <div class="org-brand">
+      <div class="brand-badge">MAPPER</div>
+      <h1 class="brand-title" id="headerVenueName">Hereabouts</h1>
+    </div>
+
+    <div class="header-status-group">
+      <!-- Autosave pill -->
+      <div id="saveIndicator" class="status-pill is-saved">
+        <span class="pill-dot"></span>
+        <span class="pill-text">Saved</span>
+      </div>
+
+      <!-- GPS accuracy pill -->
+      <div id="gpsPill" class="status-pill gps-warning" title="GPS Accuracy">
+        <span class="gps-icon">📡</span>
+        <span id="gpsAccuracyText">Searching GPS...</span>
+      </div>
+
+      <!-- Quality drawer trigger -->
+      <button id="btnOpenQuality" class="icon-btn" aria-label="Mapping Quality Checklist" title="Mapping Quality">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span id="qualityAlertBadge" class="alert-badge hidden">!</span>
+      </button>
+
+      <!-- Broadcast modal trigger -->
+      <button id="btnOpenBroadcast" class="icon-btn" aria-label="Broadcast Message" title="Broadcast Message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+
+      <!-- Switch to visitor view -->
+      <a href="/" target="_blank" class="icon-btn visitor-link" title="Open Visitor View">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- Live Warning Banner (e.g. GPS poor or Simulation Mode active) -->
+  <div id="topNoticeBanner" class="top-notice-banner hidden">
+    <span id="topNoticeMessage">GPS accuracy is low. Move to an open area.</span>
+    <button id="btnDismissNotice" class="notice-close">&times;</button>
+  </div>
+
+  <!-- Map Container -->
+  <div id="map"></div>
+
+  <!-- Recording Path HUD (Active while recording path) -->
+  <div id="recordingHUD" class="recording-hud hidden">
+    <div class="recording-pulse"></div>
+    <div class="recording-info">
+      <div class="rec-title">RECORDING PATH</div>
+      <div class="rec-metrics">
+        <span id="recPointsCount">0 pts</span> &bull; 
+        <span id="recDistance">0 m</span>
+      </div>
+    </div>
+    <button id="btnStopRecordPath" class="hud-stop-btn">
+      <span class="stop-icon">■</span> Done
+    </button>
+  </div>
+
+  <!-- Drawing Zone HUD (Active while tapping zone vertices) -->
+  <div id="drawingZoneHUD" class="drawing-hud hidden">
+    <div class="hud-info">
+      <div class="hud-title">DRAWING ZONE</div>
+      <div class="hud-sub">Tap on map to add corners (<span id="zoneVertexCount">0</span> added)</div>
+    </div>
+    <div class="hud-actions">
+      <button id="btnCancelZone" class="btn btn-secondary btn-sm">Cancel</button>
+      <button id="btnFinishZone" class="btn btn-primary btn-sm">Finish Zone</button>
+    </div>
+  </div>
+
+  <!-- Bottom Floating Action Toolbar -->
+  <nav class="org-bottom-bar" id="orgBottomBar">
+    <button id="btnAddPlace" class="action-btn place-action">
+      <span class="btn-icon">📍</span>
+      <span class="btn-label">Add Place</span>
+    </button>
+
+    <button id="btnRecordPath" class="action-btn path-action">
+      <span class="btn-icon">🚶</span>
+      <span class="btn-label">Record Path</span>
+    </button>
+
+    <button id="btnDrawZone" class="action-btn zone-action">
+      <span class="btn-icon">⬡</span>
+      <span class="btn-label">Draw Zone</span>
+    </button>
+
+    <button id="btnManageEvents" class="action-btn event-action">
+      <span class="btn-icon">📅</span>
+      <span class="btn-label">Events</span>
+    </button>
+  </nav>
+
+  <!-- Desktop / Dev Simulator Toggle Floating Pill -->
+  <div class="sim-toggle-pill" id="simTogglePill" title="Simulate GPS for testing without walking outdoors">
+    <label class="sim-label">
+      <input type="checkbox" id="simModeCheckbox">
+      <span>Simulate GPS (Click Map)</span>
+    </label>
+  </div>
+
+  <!-- ================= MODALS & DRAWERS ================= -->
+
+  <!-- 1. PIN Lock Modal -->
+  <div id="pinModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Organizer Access</h2>
+        <p>Enter organizer PIN to manage this venue.</p>
+      </div>
+      <div class="modal-body">
+        <input type="password" id="pinInput" class="form-input text-center text-lg" placeholder="••••" maxlength="12" autofocus inputmode="numeric">
+        <div id="pinError" class="form-error hidden">Invalid PIN. Try again.</div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnSubmitPin" class="btn btn-primary btn-block">Unlock Studio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 5-Second GPS Sampling Progress Modal -->
+  <div id="gpsSamplingModal" class="modal-overlay hidden">
+    <div class="modal-card text-center">
+      <div class="sampling-spinner-wrap">
+        <div class="circular-spinner">
+          <span id="samplingCountdown">5</span>
+        </div>
+      </div>
+      <h3>Refining GPS Fix...</h3>
+      <p id="samplingStatusText">Averaging readings for maximum outdoor precision.</p>
+      <div class="sampling-meta">
+        <div>Readings collected: <strong id="sampleCount">0</strong></div>
+        <div>Best accuracy: <strong id="sampleAccuracy">&plusmn;-- m</strong></div>
+      </div>
+      <button id="btnCancelSampling" class="btn btn-secondary btn-sm mt-3">Cancel</button>
+    </div>
+  </div>
+
+  <!-- 3. Add / Edit Place Modal -->
+  <div id="placeModal" class="modal-overlay hidden">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h2 id="placeModalTitle">Add Place</h2>
+        <button class="modal-close" id="btnClosePlaceModal">&times;</button>
+      </div>
+      <form id="placeForm" class="modal-body">
+        <input type="hidden" id="placeId">
+        <input type="hidden" id="placeLat">
+        <input type="hidden" id="placeLng">
+
+        <div class="form-group">
+          <label for="placeName">Place Name *</label>
+          <input type="text" id="placeName" class="form-input" placeholder="e.g. Acoustic Stage, Food Pavilion" required>
+        </div>
+
+        <div class="form-group">
+          <label>Category *</label>
+          <div class="category-grid" id="categoryPicker">
+            <!-- Dynamically populated or radio buttons -->
+          </div>
+          <input type="hidden" id="placeCategory" value="entrance" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col">
+            <label for="placeStatus">Status</label>
+            <select id="placeStatus" class="form-input">
+              <option value="open">Open</option>
+              <option value="delayed">Delayed</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div class="form-group col">
+            <label for="placeWaitTime">Wait Time (min)</label>
+            <input type="number" id="placeWaitTime" class="form-input" min="0" max="240" value="0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="placeDescription">Description / Instructions</label>
+          <textarea id="placeDescription" class="form-input" rows="2" placeholder="Helpful details, accessibility notes, hours..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Photo (optional)</label>
+          <div class="photo-upload-zone">
+            <input type="file" id="placePhotoInput" accept="image/*" class="file-input-hidden">
+            <button type="button" id="btnTriggerPhoto" class="btn btn-secondary btn-sm">Take / Choose Photo</button>
+            <div id="photoPreviewWrap" class="photo-preview hidden">
+              <img id="photoPreviewImg" src="" alt="Place photo preview">
+              <button type="button" id="btnRemovePhoto" class="btn-remove-photo">&times;</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="coords-display">
+          GPS: <span id="displayLat">--</span>, <span id="displayLng">--</span>
+          <span class="subtle">(draggable on map)</span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btnDeletePlace" class="btn btn-danger hidden">Delete Place</button>
+          <button type="submit" class="btn btn-primary ml-auto">Save Place</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Path Tagging Modal (after finishing recording) -->
+  <div id="pathTagModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Path Details</h2>
+        <p>Length: <strong id="tagModalLength">0 m</strong>. Select path attributes:</p>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="pathNameInput">Path Name (optional)</label>
+          <input type="text" id="pathNameInput" class="form-input" placeholder="e.g. North Promenade, Lake Trail">
+        </div>
+        <label class="mb-2 block">Accessibility & Tags</label>
+        <div class="tags-checkbox-grid">
+          <label class="tag-chip"><input type="checkbox" value="stairs" class="pathTagCheckbox"> <span>🪜 Stairs</span></label>
+          <label class="tag-chip"><input type="checkbox" value="ramp" class="pathTagCheckbox"> <span>♿ Ramp</span></label>
+          <label class="tag-chip"><input type="checkbox" value="covered" class="pathTagCheckbox"> <span>☂️ Covered</span></label>
+          <label class="tag-chip"><input type="checkbox" value="narrow" class="pathTagCheckbox"> <span>↔️ Narrow</span></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnDiscardPath" class="btn btn-secondary">Discard</button>
+        <button id="btnSavePath" class="btn btn-primary">Save Path to Network</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Edit Existing Path Modal -->
+  <div id="pathEditModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Edit Path</h2>
+        <button class="modal-close" id="btnClosePathEdit">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editPathId">
+        <div class="form-group">
+          <label for="editPathName">Path Name</label>
+          <input type="text" id="editPathName" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Tags</label>
+          <div class="tags-checkbox-grid">
+            <label class="tag-chip"><input type="checkbox" value="stairs" class="editPathTagCheckbox"> <span>🪜 Stairs</span></label>
+            <label class="tag-chip"><input type="checkbox" value="ramp" class="editPathTagCheckbox"> <span>♿ Ramp</span></label>
+            <label class="tag-chip"><input type="checkbox" value="covered" class="editPathTagCheckbox"> <span>☂️ Covered</span></label>
+            <label class="tag-chip"><input type="checkbox" value="narrow" class="editPathTagCheckbox"> <span>↔️ Narrow</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnDeleteCurrentPath" class="btn btn-danger">Delete Path</button>
+        <button id="btnSaveEditedPath" class="btn btn-primary ml-auto">Update Path</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Draw Zone Name Modal -->
+  <div id="zoneModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Save Zone Area</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="zoneName">Zone Name *</label>
+          <input type="text" id="zoneName" class="form-input" placeholder="e.g. Festival Lawn, Food Court" required>
+        </div>
+        <div class="form-group">
+          <label for="zoneColor">Zone Outline Color</label>
+          <input type="color" id="zoneColor" class="form-input color-picker-input" value="#e67e22">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnDiscardZone" class="btn btn-secondary">Discard</button>
+        <button id="btnSaveZone" class="btn btn-primary">Save Zone</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Broadcast Message Modal -->
+  <div id="broadcastModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Visitor Broadcast Banner</h2>
+        <button class="modal-close" id="btnCloseBroadcast">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm text-subtle mb-2">This alert appears at the top of every visitor's screen in real time.</p>
+        <textarea id="broadcastInput" class="form-input" rows="3" placeholder="e.g. Main stage concert delayed by 15 mins due to rain. Free poncho distribution at Gate 1."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="btnClearBroadcast" class="btn btn-secondary">Clear Banner</button>
+        <button id="btnSaveBroadcast" class="btn btn-primary ml-auto">Publish Broadcast</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Events Management Modal -->
+  <div id="eventsModal" class="modal-overlay hidden">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h2>Venue Events</h2>
+        <button class="modal-close" id="btnCloseEvents">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="eventsList" class="events-list-container">
+          <!-- Dynamic event cards -->
+        </div>
+
+        <hr class="divider">
+
+        <h3 id="eventFormTitle">Add New Event</h3>
+        <form id="eventForm" class="mt-2">
+          <input type="hidden" id="eventId">
+          <div class="form-group">
+            <label for="eventTitle">Event Title *</label>
+            <input type="text" id="eventTitle" class="form-input" placeholder="e.g. Brass Band Concert" required>
+          </div>
+          <div class="form-group">
+            <label for="eventPlace">Place Location *</label>
+            <select id="eventPlace" class="form-input" required>
+              <!-- Populated from places -->
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group col">
+              <label for="eventStart">Start Time *</label>
+              <input type="datetime-local" id="eventStart" class="form-input" required>
+            </div>
+            <div class="form-group col">
+              <label for="eventEnd">End Time *</label>
+              <input type="datetime-local" id="eventEnd" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="eventDesc">Description</label>
+            <input type="text" id="eventDesc" class="form-input" placeholder="Details about this event...">
+          </div>
+          <div class="form-actions-right">
+            <button type="button" id="btnCancelEventEdit" class="btn btn-secondary hidden">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Event</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Mapping Quality Checklist Drawer -->
+  <aside id="qualityDrawer" class="quality-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">
+        <h3>Mapping Quality</h3>
+        <span class="subtle">Venue Audit Checklist</span>
+      </div>
+      <button class="modal-close" id="btnCloseQuality">&times;</button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Venue stats counters -->
+      <div class="quality-stats-grid">
+        <div class="stat-box">
+          <div class="stat-number" id="statPlacesCount">0</div>
+          <div class="stat-label">Places</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="statPathsCount">0</div>
+          <div class="stat-label">Paths</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="statZonesCount">0</div>
+          <div class="stat-label">Zones</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="statEventsCount">0</div>
+          <div class="stat-label">Events</div>
+        </div>
+      </div>
+
+      <div class="checklist-section">
+        <h4>Quality Checklist</h4>
+        <ul class="checklist-items">
+          <li id="chkPlaces">
+            <span class="chk-icon">⏳</span>
+            <div class="chk-text">
+              <strong>Place Reachability</strong>
+              <p id="chkPlacesDesc">Checking distance from paths...</p>
+            </div>
+          </li>
+          <li id="chkPaths">
+            <span class="chk-icon">⏳</span>
+            <div class="chk-text">
+              <strong>Path Network Connectivity</strong>
+              <p id="chkPathsDesc">Checking for disconnected path segments...</p>
+            </div>
+          </li>
+          <li id="chkCoverage">
+            <span class="chk-icon">⏳</span>
+            <div class="chk-text">
+              <strong>Essential Amenities</strong>
+              <p id="chkCoverageDesc">Entrance, Restroom, and Medical presence...</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Warnings list -->
+      <div id="qualityWarningsList" class="warnings-box hidden">
+        <h5>Issues Detected:</h5>
+        <ul id="warningsUl"></ul>
+      </div>
+
+      <div class="drawer-footer">
+        <div class="form-group mb-2">
+          <label for="venueNameInput">Venue Name</label>
+          <input type="text" id="venueNameInput" class="form-input form-input-sm" value="Hereabouts Venue">
+        </div>
+        <button id="btnSetMapCenter" class="btn btn-secondary btn-block btn-sm">Set Current View as Venue Default</button>
+      </div>
+    </div>
+  </aside>
+  <div id="drawerBackdrop" class="drawer-backdrop hidden"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Turf.js CDN -->
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+  <!-- Shared logic -->
+  <script src="shared.js"></script>
+  <!-- Organizer logic -->
+  <script src="organizer.js"></script>
+</body>
+</html>

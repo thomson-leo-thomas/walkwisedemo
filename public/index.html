@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Hereabouts &mdash; Venue Navigator</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Visitor Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Broadcast Announcement Banner (if active) -->
+  <div id="broadcastBanner" class="broadcast-banner hidden">
+    <div class="broadcast-icon">📢</div>
+    <div class="broadcast-text" id="broadcastMessage">Welcome to the venue!</div>
+    <button id="btnCloseBroadcastBanner" class="banner-close" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <!-- Top Floating Overlay: Brand + Controls -->
+  <div class="top-overlay">
+    <div class="top-row">
+      <div class="venue-badge">
+        <span class="venue-dot"></span>
+        <h1 class="venue-name" id="venueTitle">Hereabouts</h1>
+      </div>
+
+      <!-- Quick Controls -->
+      <div class="top-controls">
+        <!-- Snap to paths switch -->
+        <label class="toggle-pill" title="Toggle automatic snapping to mapped walking paths">
+          <input type="checkbox" id="snapToggle" checked>
+          <span class="toggle-track"></span>
+          <span class="toggle-label">Snap: <b id="snapStateText">ON</b></span>
+        </label>
+
+        <!-- Recenter on user button -->
+        <button id="btnRecenter" class="map-ctrl-btn" title="Center on my location">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        </button>
+
+        <!-- Link to organizer (discrete) -->
+        <a href="/organizer" class="map-ctrl-btn" title="Organizer Mapping Studio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Big "What Next?" Recommendation Hero Card -->
+    <div id="whatNextCard" class="what-next-card">
+      <div class="what-next-header">
+        <span class="what-next-badge">WHAT NEXT?</span>
+        <span class="what-next-action-hint">Tap for route &rarr;</span>
+      </div>
+      <div class="what-next-content" id="whatNextBody">
+        Calculating nearby happenings...
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Route Walking Directions HUD (When navigating to a place) -->
+  <div id="routingHUD" class="routing-hud hidden">
+    <div class="hud-main">
+      <div class="hud-icon">🚶</div>
+      <div class="hud-details">
+        <div class="hud-dest" id="hudDestName">Destination</div>
+        <div class="hud-stats">
+          <span id="hudDistance">-- m</span> &bull; 
+          <span id="hudMinutes">-- min</span>
+          <span id="hudTags" class="hud-tags-pill hidden"></span>
+        </div>
+      </div>
+    </div>
+    <button id="btnClearRoute" class="hud-close-btn" title="Cancel Route">&times;</button>
+  </div>
+
+  <!-- Map Container -->
+  <div id="map"></div>
+
+  <!-- Simulation indicator / Notice for desktop or non-GPS testers -->
+  <div class="desktop-hint-pill" id="desktopHintPill">
+    <span>💡 Tip: Click anywhere on the map to set your location</span>
+  </div>
+
+  <!-- Mobile Bottom Sheet ("Nearby" & "Happening soon") -->
+  <section id="bottomSheet" class="bottom-sheet collapsed">
+    <!-- Sheet Drag Handle / Header -->
+    <div class="sheet-handle-wrap" id="sheetHeader">
+      <div class="sheet-drag-handle"></div>
+      <div class="sheet-header-content">
+        <div class="sheet-title-row">
+          <span class="sheet-title">Explore Venue</span>
+          <span class="sheet-toggle-icon" id="sheetToggleIcon">▲</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sheet Tabs -->
+    <div class="sheet-tabs">
+      <button class="sheet-tab active" data-tab="nearby">Nearby Places</button>
+      <button class="sheet-tab" data-tab="events">Happening Soon (<span id="eventCountBadge">0</span>)</button>
+    </div>
+
+    <!-- Tab 1: Nearby Places List -->
+    <div class="sheet-content active" id="tabNearby">
+      <!-- Category chips filter -->
+      <div class="category-filter-scroll" id="categoryChips">
+        <button class="filter-chip active" data-cat="all">All</button>
+        <!-- Populated from shared categories -->
+      </div>
+      <div class="places-list" id="placesList">
+        <!-- Rendered places cards -->
+      </div>
+    </div>
+
+    <!-- Tab 2: Happening Soon Events List -->
+    <div class="sheet-content" id="tabEvents">
+      <div class="events-list" id="visitorEventsList">
+        <!-- Rendered events cards -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Place Detail Modal (When a place is tapped) -->
+  <div id="placeDetailModal" class="place-detail-modal hidden">
+    <div class="detail-card">
+      <button id="btnCloseDetail" class="detail-close">&times;</button>
+      
+      <div id="detailPhotoWrap" class="detail-photo-wrap hidden">
+        <img id="detailPhoto" src="" alt="Place photo">
+      </div>
+
+      <div class="detail-body">
+        <div class="detail-header-row">
+          <div class="detail-cat-badge" id="detailCatBadge">Food</div>
+          <div class="detail-status-pill" id="detailStatusPill">Open</div>
+        </div>
+
+        <h2 class="detail-name" id="detailName">Place Name</h2>
+        <p class="detail-desc" id="detailDesc">Place description goes here...</p>
+
+        <div class="detail-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Distance</span>
+            <span class="meta-val" id="detailDistance">-- m</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Walk Time</span>
+            <span class="meta-val" id="detailWalkTime">-- min</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Wait Time</span>
+            <span class="meta-val" id="detailWaitTime">0 min</span>
+          </div>
+        </div>
+
+        <button id="btnTakeMeThere" class="btn-navigate">
+          <span class="nav-icon">🚶</span>
+          <span>Take me there</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Turf.js CDN -->
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+  <!-- Shared logic -->
+  <script src="shared.js"></script>
+  <!-- Visitor App logic -->
+  <script src="app.js"></script>
+</body>
+</html>

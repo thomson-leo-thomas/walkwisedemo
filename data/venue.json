@@ -1,0 +1,271 @@
+{
+  "venueName": "Meadowbrook Campus Fest (Tested)",
+  "broadcast": "Welcome to Meadowbrook Fest! Live music starts soon at Main Stage. Restrooms and hydration points are open.",
+  "center": [
+    37.7695,
+    -122.4465
+  ],
+  "zoom": 17,
+  "places": [
+    {
+      "id": "p_gate1",
+      "name": "Main Entrance (South Gate)",
+      "category": "entrance",
+      "description": "Main festival entrance and ticket verification hub. Accessible ramp on left.",
+      "photo": "",
+      "status": "open",
+      "waitTime": 5,
+      "lat": 37.7682,
+      "lng": -122.4468,
+      "createdAt": "2026-10-10T20:00:00.000Z"
+    },
+    {
+      "id": "p_stage",
+      "name": "Acoustic Sun Stage",
+      "category": "stage",
+      "description": "Live open-air performances, indie music sets, and speaker talks.",
+      "photo": "",
+      "status": "open",
+      "waitTime": 0,
+      "lat": 37.7708,
+      "lng": -122.4452,
+      "createdAt": "2026-10-10T20:05:00.000Z"
+    },
+    {
+      "id": "p_food",
+      "name": "Food Pavilion & Food Trucks",
+      "category": "food",
+      "description": "Artisan pizza, vegetarian tacos, local coffees, and fresh juices.",
+      "photo": "",
+      "status": "open",
+      "waitTime": 10,
+      "lat": 37.7698,
+      "lng": -122.4474,
+      "createdAt": "2026-10-10T20:10:00.000Z"
+    },
+    {
+      "id": "p_restrooms",
+      "name": "Central Restrooms & Water Point",
+      "category": "toilet",
+      "description": "Wheelchair-accessible gender-neutral restrooms and free hydration refills.",
+      "photo": "",
+      "status": "open",
+      "waitTime": 2,
+      "lat": 37.7692,
+      "lng": -122.4459,
+      "createdAt": "2026-10-10T20:12:00.000Z"
+    },
+    {
+      "id": "p_medical",
+      "name": "First Aid & Medical Tent",
+      "category": "medical",
+      "description": "Paramedic staff, heat safety supplies, and quiet recovery corner.",
+      "photo": "",
+      "status": "open",
+      "waitTime": 0,
+      "lat": 37.7686,
+      "lng": -122.4455,
+      "createdAt": "2026-10-10T20:15:00.000Z"
+    },
+    {
+      "id": "p_exhibit",
+      "name": "Innovation Expo Hall",
+      "category": "building",
+      "description": "Student showcases, engineering demos, and air-conditioned lounge.",
+      "photo": "",
+      "status": "open",
+      "waitTime": 0,
+      "lat": 37.7712,
+      "lng": -122.4478,
+      "createdAt": "2026-10-10T20:18:00.000Z"
+    },
+    {
+      "id": "p_parking",
+      "name": "West Visitor Parking",
+      "category": "parking",
+      "description": "Visitor vehicle parking, bicycle racks, and rideshare pickup zone.",
+      "photo": "",
+      "status": "open",
+      "waitTime": 0,
+      "lat": 37.769,
+      "lng": -122.4485,
+      "createdAt": "2026-10-10T20:20:00.000Z"
+    }
+  ],
+  "paths": [
+    {
+      "id": "path_main_spine",
+      "name": "Main Central Walkway",
+      "tags": [
+        "covered",
+        "ramp"
+      ],
+      "coordinates": [
+        [
+          -122.4468,
+          37.7682
+        ],
+        [
+          -122.4465,
+          37.7688
+        ],
+        [
+          -122.4462,
+          37.7694
+        ],
+        [
+          -122.4458,
+          37.7701
+        ],
+        [
+          -122.4453,
+          37.7707
+        ]
+      ],
+      "lengthMeters": 320,
+      "createdAt": "2026-10-10T20:25:00.000Z"
+    },
+    {
+      "id": "path_west_fork",
+      "name": "West Plaza Walk",
+      "tags": [],
+      "coordinates": [
+        [
+          -122.4462,
+          37.7694
+        ],
+        [
+          -122.447,
+          37.7696
+        ],
+        [
+          -122.4474,
+          37.7698
+        ],
+        [
+          -122.4477,
+          37.7705
+        ],
+        [
+          -122.4478,
+          37.7711
+        ]
+      ],
+      "lengthMeters": 240,
+      "createdAt": "2026-10-10T20:28:00.000Z"
+    },
+    {
+      "id": "path_east_medical",
+      "name": "East Medical Link",
+      "tags": [
+        "ramp"
+      ],
+      "coordinates": [
+        [
+          -122.4465,
+          37.7688
+        ],
+        [
+          -122.4457,
+          37.7687
+        ],
+        [
+          -122.4455,
+          37.7686
+        ]
+      ],
+      "lengthMeters": 95,
+      "createdAt": "2026-10-10T20:30:00.000Z"
+    },
+    {
+      "id": "path_parking_spur",
+      "name": "Parking Connector",
+      "tags": [],
+      "coordinates": [
+        [
+          -122.447,
+          37.7696
+        ],
+        [
+          -122.4478,
+          37.7693
+        ],
+        [
+          -122.4484,
+          37.769
+        ]
+      ],
+      "lengthMeters": 140,
+      "createdAt": "2026-10-10T20:32:00.000Z"
+    }
+  ],
+  "zones": [
+    {
+      "id": "zone_food",
+      "name": "Food & Social Courtyard",
+      "color": "#f39c12",
+      "coordinates": [
+        [
+          -122.4478,
+          37.7695
+        ],
+        [
+          -122.4468,
+          37.7693
+        ],
+        [
+          -122.4466,
+          37.7701
+        ],
+        [
+          -122.4477,
+          37.7703
+        ]
+      ],
+      "createdAt": "2026-10-10T20:35:00.000Z"
+    },
+    {
+      "id": "zone_lawn",
+      "name": "Festival Lawn & Stage Arena",
+      "color": "#27ae60",
+      "coordinates": [
+        [
+          -122.4464,
+          37.77
+        ],
+        [
+          -122.445,
+          37.7703
+        ],
+        [
+          -122.445,
+          37.7712
+        ],
+        [
+          -122.4462,
+          37.771
+        ]
+      ],
+      "createdAt": "2026-10-10T20:38:00.000Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "evt_dance",
+      "title": "Solar Groove Brass Band",
+      "placeId": "p_stage",
+      "startTime": "2026-10-11T03:00:00.000Z",
+      "endTime": "2026-10-11T04:30:00.000Z",
+      "description": "High-energy outdoor brass and drum performance on the acoustic lawn."
+    },
+    {
+      "id": "evt_demo",
+      "title": "Robotics & AI Student Showcase",
+      "placeId": "p_exhibit",
+      "startTime": "2026-10-11T03:30:00.000Z",
+      "endTime": "2026-10-11T05:00:00.000Z",
+      "description": "Interactive autonomous robot demonstrations and project pitches."
+    }
+  ],
+  "updatedAt": "2026-10-10T21:12:21.968Z"
+}
